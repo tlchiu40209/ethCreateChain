@@ -16,3 +16,5 @@ createChain [-i/-c/-r] [chain ID] [Options].
 -d [Difficulty] Determine the difficulty value for the chain.
 -g [GasLimit] Determine the GasLimit for the chain.
 ```
+
+- Note : Please specify path to geth and the store location of the chain in config.ini first !
