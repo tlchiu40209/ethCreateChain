@@ -314,7 +314,11 @@ void ui_WriteConfig()
 	genesisFile << "\t\t" << "\"homesteadBlock\": 0," << "\n";
 	genesisFile << "\t\t" << "\"eip150Block\": 0," << "\n";
 	genesisFile << "\t\t" << "\"eip155Block\": 0," << "\n";
-	genesisFile << "\t\t" << "\"eip158Block\": 0" << "\n";
+	genesisFile << "\t\t" << "\"eip158Block\": 0," << "\n";
+	genesisFile << "\t\t" << "\"byzantiumBlock\": 0," << "\n";
+	genesisFile << "\t\t" << "\"constantinopleBlock\": 0," << "\n";
+	genesisFile << "\t\t" << "\"petersburgBlock\": 0," << "\n";
+	genesisFile << "\t\t" << "\"istanbulBlock\": 0" << "\n"; 
 	genesisFile << "\t" << "}," << "\n";
 	genesisFile << "\t" << "\"nonce\": \"0x" << nonce.c_str() << "\"," << "\n";
 	genesisFile << "\t" << "\"timestamp\": \"0x0\"," << "\n";
