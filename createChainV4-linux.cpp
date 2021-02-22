@@ -9,6 +9,7 @@
 #include <vector>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <limits.h>
 using namespace std;
 
 string chainID;
@@ -57,8 +58,20 @@ void auto_gasLimit(); //Implemented
 void auto_autoAccount(string password, string preAlloc); //Implemented
 string auto_password(const int digits); //Implemented
 
+string getExePath();
+string getExeLocation();
+
+string programName = "";
+
 int main(int argc, char **argv)
 {
+	string progNameLocal(argv[0]);
+	if (progNameLocal.find("./") != std::string::npos)
+	{
+		progNameLocal = progNameLocal.substr(2, progNameLocal.length() -2);
+	}
+	programName = progNameLocal;
+
 	config_Load();
 	if (argc < 2)
 	{
@@ -110,13 +123,11 @@ int main(int argc, char **argv)
 	for (int i = argc -1; i > 0; i--)
 	{
 		string subParameter(argv[i]);
-		
 		/*Parameter Test*/
 		//cout << "Paramter " << to_string(i) << " : " << subParameter << endl;
 
 		parameterStack.push_back(subParameter);
 	}
-	
 	/* Check the first action*/
 	string identifier;
 	identifier = parameterStack.back();
@@ -237,7 +248,6 @@ void ui_Unattended()
 		}
 		string identifier = parameterStack.back();
 		parameterStack.pop_back();
-		
 		if (identifier == "-a")
 		{
 			if (check_parStackWoreOut())
@@ -329,7 +339,6 @@ void ui_Unattended()
 			{
 				totalAccountCount = std::stoi(accNumberString);
 				string identifiers[] = {"-d", "-g", "-n", "-p", "-w"};
-				
 				if (check_parStackWoreOut())
 				{
 					noAccPassword = true;
@@ -577,7 +586,7 @@ void ui_WriteConfigPoA()
 
 
 		//End of ExtraData Config
-		
+
 		genesisFile << "\t" << "\"difficulty\": \"0x" << difficulty.c_str() << "\"," << "\n";
 		genesisFile << "\t" << "\"gasLimit\": \"0x" << gas.c_str() << "\"," << "\n";
 		genesisFile << "\t" << "\"mixhash\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"," << "\n";
@@ -860,12 +869,12 @@ void ui_WriteConfig()
 	{
 		cout << "No Preconfigured Accounts \n";
 	}
-	
-	cout << "\n";	
+
+	cout << "\n";
 	cout << "You MUST initialize your private chain before you use it\n";
 	cout << "Use " << iSFilePath << " to init your private chain, run ONCE.\n";
 	cout << "Use " << bSFilePath << " to boot your private chain, AFTER init.\n";
-	
+
 }
 
 void ui_RemovePoA()
@@ -897,6 +906,7 @@ void ui_Remove()
 
 void ui_CreateAccountPoA()
 {
+	string outputDir = getExeLocation();
 	if (totalAccountCount < 2)
 	{
 		cout << "It is required to have at least 2 accounts to enable PoA";
@@ -905,8 +915,10 @@ void ui_CreateAccountPoA()
 	accounts = new string[totalAccountCount];
 	for (int i = 0; i < totalAccountCount; i++)
 	{
+		string passwordLoc = outputDir + "password" + chainID + ".txt";
+		string resultLoc = outputDir + "result" + chainID + ".txt";
 		ofstream ofc;
-		ofc.open("password.txt");
+		ofc.open(passwordLoc.c_str());
 		ofc << passwords[i];
 		ofc.flush();
 		ofc.close();
@@ -923,12 +935,14 @@ void ui_CreateAccountPoA()
 		command.append(chainID);
 		command.append("-P");
 		command.append(to_string(i));
-		command.append(" -password ./password.txt");
-		command.append(" >> result.txt");
+		command.append(" -password ");
+		command.append(passwordLoc);
+		command.append(" >> ");
+		command.append(resultLoc);
 		system(command.c_str());
 
 		ifstream ifc;
-		ifc.open("result.txt");
+		ifc.open(resultLoc.c_str());
 		if (ifc.good())
 		{
 			while (ifc.peek() != EOF)
@@ -941,27 +955,33 @@ void ui_CreateAccountPoA()
 				}
 			}
 			ifc.close();
-			system("rm -rf ./result.txt");
+			string rmCmd = "rm -rf " + resultLoc;
+			system(rmCmd.c_str());
 		}
 		else
 		{
 			ifc.close();
+			string rmCmd = "rm -rf " + resultLoc;
 			cout << "Cannot read the output result from geth \n";
-			system("rm -rf ./result.txt");
+			system(rmCmd.c_str());
 		}
-		system("rm -rf ./password.txt");
+		string rmCmd = "rm -rf " + passwordLoc;
+		system(passwordLoc.c_str());
 
 	}
-	
+
 }
 
 void ui_CreateAccount()
 {
+	string outputDir = getExeLocation();
 	accounts = new string[totalAccountCount];
 	for (int i = 0; i < totalAccountCount; i++)
 	{
 		ofstream ofc;
-		ofc.open("password.txt");
+		string passwordLoc = outputDir + "password" + chainID + ".txt";
+		string resultLoc = outputDir + "password" + chainID + ".txt";
+		ofc.open(passwordLoc.c_str());
 		ofc << passwords[i];
 		ofc.flush();
 		ofc.close();
@@ -980,7 +1000,7 @@ void ui_CreateAccount()
 		system(command.c_str());
 
 		ifstream ifc;
-		ifc.open("result.txt");
+		ifc.open(resultLoc.c_str());
 		if (ifc.good())
 		{
 			while (ifc.peek() != EOF)
@@ -993,16 +1013,19 @@ void ui_CreateAccount()
 				}
 			}
 			ifc.close();
-			system("rm -rf ./result.txt");
+			string  rmCmd = "rm -rf " + resultLoc;
+			system(rmCmd.c_str());
 		}
 		else
 		{
 			ifc.close();
 			cout << "Cannot read the output result from geth \n";
-			system("rm -rf ./result.txt");
+			string rmCmd = "rm -rf " + resultLoc;
+			system(rmCmd.c_str());
 			exit(1);
 		}
-		system("rm -rf ./password.txt");
+		string rmCmd = "rm -rf " + passwordLoc;
+		system(rmCmd.c_str());
 
 	}
 
@@ -1053,7 +1076,7 @@ void ui_Create()
 		if (dataLoc.at(dataLoc.length() -1) != '/')
 		{
 			command.append("/");
-		}	
+		}
 		command.append("chain-");
 		command.append(chainID);
 		system(command.c_str());
@@ -1098,7 +1121,6 @@ void ui_Interactive()
 			auto_gasLimit();
 			cout << "GasLimit Generated as " << gas << "\n";
 		}
-		
 	} while (!check_gasLimit());
 
 	do
@@ -1120,7 +1142,6 @@ void ui_Interactive()
 			auto_difficulty(atoi(choice.c_str()));
 		}
 	} while (!check_difficulty());
-	
 	string accountInput;
 	do
 	{
@@ -1137,7 +1158,6 @@ void ui_Interactive()
 			cout << "How many accounts you would like to create ? \n";
 			getline(cin, accountAmount);
 		} while (accountAmount.at(0) == '0' || accountAmount.find_first_not_of("0123456789") != std::string::npos);
-		
 		string accountPrealloc;
 		string accountPreallocInput = "";
 
@@ -1156,7 +1176,7 @@ void ui_Interactive()
 				getline(cin, accountPreallocInput);
 			} while (accountPreallocInput.at(0) == '0' || accountPreallocInput.find_first_not_of("1234567890") != std::string::npos);
 
-		}	
+		}
 
 		string accountPassword;
 		string accountPasswordInput = "";
@@ -1165,7 +1185,7 @@ void ui_Interactive()
 			cout << "Do you want to create pre-set password for all accounts (Y/N)? \n";
 			getline(cin, accountPassword);
 		} while (accountPassword.length() == 1 && accountPassword.find_first_not_of("YyNn") != std::string::npos);
-		
+
 		if (accountPassword == "Y" || accountPassword == "y")
 		{
 			do
@@ -1287,8 +1307,10 @@ bool check_chainExistPoA()
 
 void config_Load()
 {
+	string outputDir = getExeLocation();
+	string configLoc = outputDir + "config.ini";
 	ifstream ifc;
-	ifc.open("config.ini");
+	ifc.open(configLoc.c_str());
 	if (ifc.good())
 	{
 		while (ifc.peek() != EOF)
@@ -1320,6 +1342,7 @@ void config_Load()
 
 void config_Reset()
 {
+	string outputDir = getExeLocation();
 	cout << "The location of geth executable ? \n";
 	string toGethLoc;
 	getline(cin, toGethLoc);
@@ -1330,7 +1353,8 @@ void config_Reset()
 	dataLoc.assign(toDataLoc);
 	cout << "Config Reset! \n";
 	ofstream ofc;
-	ofc.open("config.ini");
+	string configLoc = outputDir + "config.ini";
+	ofc.open(configLoc.c_str());
 	ofc << "geth=" << toGethLoc << "\n";
 	ofc << "data=" << toDataLoc << "\n";
 	ofc.flush();
@@ -1472,4 +1496,17 @@ string auto_password(const int digits)
 		returnPassword.append(sample.substr(choice, 1));
 	}
 	return returnPassword;
+}
+
+string getExeLocation()
+{
+        int programNameSize = programName.length();
+        return (getExePath()).substr(0, (getExePath()).length() - programNameSize);
+}
+
+string getExePath()
+{
+        char result[PATH_MAX];
+        ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+        return std::string(result, (count > 0) ? count : 0);
 }
