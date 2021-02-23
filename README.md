@@ -14,7 +14,7 @@ createChain [-i/-c/-r] [chain ID] [Options].
 -p Create the chain with PoA Consensus Algorithm.
 ```
 
-- [Options for -c :
+- [Options for -c] :
 ```sh
 -a [Password:Amount] Specifying the preconfigured accounts.
 -b [Number] [Password] [Amount] Accounts batch creation.
