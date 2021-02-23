@@ -9,6 +9,7 @@
 #include <vector>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <limits.h>
 using namespace std;
 
 string chainID;
@@ -57,33 +58,45 @@ void auto_gasLimit(); //Implemented
 void auto_autoAccount(string password, string preAlloc); //Implemented
 string auto_password(const int digits); //Implemented
 
+string getExePath();
+string getExeLocation();
+
+string programName = "";
+
 int main(int argc, char **argv)
 {
+	string progNameLocal(argv[0]);
+	if (progNameLocal.find("./") != std::string::npos)
+	{
+		progNameLocal = progNameLocal.substr(2, progNameLocal.length() -2);
+	}
+	programName = progNameLocal;
+
 	config_Load();
 	if (argc < 2)
 	{
 		cout << "\n";
-		cout << "简易乙太坊私有链建立工具 第四版 / Linux平台" << "\n";
+		cout << "简易乙太坊私有链创建工具 第四版 / Linux平台" << "\n";
 		cout << "操作方式 : createChain [-i/-c/-r] [chain ID] [其他选项]" << "\n";
-		cout << "\t-i [其他选项...]\t\t 互动式建立" << "\n";
-		cout << "\t-c [chain ID] [其他选项...]\t 建立私有链，必须配合其他选项" << "\n";
+		cout << "\t-i [其他选项...]\t\t 互动式创建" << "\n";
+		cout << "\t-c [chain ID] [其他选项...]\t 创建私有链，必须配合其他选项" << "\n";
 		cout << "\t-r [chain ID] [其他选项...]\t 移除私有链" << "\n";
 		cout << "\n";
-		cout << "[-i (互动式建立) 适用的其他选项] : " << "\n";
-		cout << "\t-p \t\t\t <可选> \t 建立的私有链使用权威证明共识算法" << "\n";
+		cout << "[-i (互动式创建) 适用的其他选项] : " << "\n";
+		cout << "\t-p \t\t\t <可选> \t 创建的私有链使用权威证明共识算法" << "\n";
 		cout << "\n";
-		cout << "[-c (建立) 适用的其他选项] : " << "\n";
+		cout << "[-c (创建) 适用的其他选项] : " << "\n";
 		cout << "\t[chain ID] \t\t <必要> \t 私有链的 chain ID" << "\n";
 		cout << "\n";
-		cout << "\t-a [pw:am]... \t\t <可选> \t 预先建立账户" << "\n";
+		cout << "\t-a [pw:am]... \t\t <可选> \t 创建账户" << "\n";
 		cout << "\t\t pw\t\t <必要> \t 账户密码" << "\n";
-		cout << "\t\t am\t\t <必要> \t 账户预先配置金额" << "\n";
+		cout << "\t\t am\t\t <必要> \t 账户预存金额" << "\n";
 		cout << "\t\t 范例 -a pass1:10000 pass2:20000" << "\n";
 		cout << "\n";
-		cout << "\t-b [num] [pw] [am] \t <可选> \t 大量账户建立工具" << "\n";
-		cout << "\t\t num\t\t <必要> \t 建立账户数额" << "\n";
+		cout << "\t-b [num] [pw] [am] \t <可选> \t 账户批量创建工具" << "\n";
+		cout << "\t\t num\t\t <必要> \t 创建账户数量" << "\n";
 		cout << "\t\t pw\t\t <可选> \t 默认密码" << "\n";
-		cout << "\t\t am\t\t <可选> \t 默认预先配置金额" << "\n";
+		cout << "\t\t am\t\t <可选> \t 默认预存金额" << "\n";
 		cout << "\t\t 范例 -b 3 pass 20000" << "\n";
 		cout << "\n";
 		cout << "\t-d [difficulty] \t <可选> \t 私有链初始挖矿难度" << "\n";
@@ -95,7 +108,7 @@ int main(int argc, char **argv)
 		cout << "\t-n [nonce] \t\t <可选> \t 私有链的杂凑值" << "\n";
 		cout << "\t\t nonce \t\t <必要> \t 一组最多十六位代表杂凑值的十六进制数值" << "\n";
 		cout << "\n";
-		cout << "\t-p \t\t\t <可选> \t 建立的私有链使用权威证明共识算法" << "\n";
+		cout << "\t-p \t\t\t <可选> \t 创建的私有链使用权威证明共识算法" << "\n";
 		cout << "\n";
 		cout << "\t-w [networkID] \t\t <可选> \t 私有链的 network ID" << "\n";
 		cout << "\t\t networkID \t <必要> \t 一组代表 network ID 的十进制数值" << "\n";
@@ -110,13 +123,11 @@ int main(int argc, char **argv)
 	for (int i = argc -1; i > 0; i--)
 	{
 		string subParameter(argv[i]);
-		
 		/*Parameter Test*/
 		//cout << "Paramter " << to_string(i) << " : " << subParameter << endl;
 
 		parameterStack.push_back(subParameter);
 	}
-	
 	/* Check the first action*/
 	string identifier;
 	identifier = parameterStack.back();
@@ -237,7 +248,6 @@ void ui_Unattended()
 		}
 		string identifier = parameterStack.back();
 		parameterStack.pop_back();
-		
 		if (identifier == "-a")
 		{
 			if (check_parStackWoreOut())
@@ -329,7 +339,6 @@ void ui_Unattended()
 			{
 				totalAccountCount = std::stoi(accNumberString);
 				string identifiers[] = {"-d", "-g", "-n", "-p", "-w"};
-				
 				if (check_parStackWoreOut())
 				{
 					noAccPassword = true;
@@ -478,13 +487,13 @@ void ui_Unattended()
 			parameterStack.pop_back();
 			if (!check_networkID())
 			{
-				cout << "不正确的 network ID." << "\n";
+				cout << "不正确的参数" << "\n";
 				exit(1);
 			}
 		}
 		else
 		{
-			cout << "不正确的参数" << "\n";
+			cout << "Bad parameters." << "\n";
 			exit(1);
 		}
 
@@ -523,7 +532,7 @@ void ui_WriteConfigPoA()
 {
 	if (totalAccountCount < 2)
 	{
-		cout << "必须建立至少两个以上的帐号以启动权威证明共识算法\n";
+		cout << "必须创建至少两个以上的帐号以启动权威证明共识算法\n";
 		exit(1);
 	}
 	ui_CreatePoA();
@@ -577,7 +586,7 @@ void ui_WriteConfigPoA()
 
 
 		//End of ExtraData Config
-		
+
 		genesisFile << "\t" << "\"difficulty\": \"0x" << difficulty.c_str() << "\"," << "\n";
 		genesisFile << "\t" << "\"gasLimit\": \"0x" << gas.c_str() << "\"," << "\n";
 		genesisFile << "\t" << "\"mixhash\": \"0x0000000000000000000000000000000000000000000000000000000000000000\"," << "\n";
@@ -687,13 +696,13 @@ void ui_WriteConfigPoA()
 	{
 		cout << "P" << i << ":\t" << accounts[i] << "\n";
 		cout << "\t\t密码:\t\t" << passwords[i] << "\n";
-		cout << "\t\t配置金额:\t" << amounts[i] << "\n";
+		cout << "\t\t预存金额:\t" << amounts[i] << "\n";
 		cout << "\t\t端口:\t\t" << to_string(30303 + i) << "\n";
 	}
 
 	cout << "\n";
 
-	cout << "为了让您更加简便的模拟多节点环境\n";
+	cout << "为了让您更加简便地模拟多节点环境\n";
 	cout << "每个权威证明帐户皆已分散至各自的数据库\n";
 	cout << "请在每个数据库中执行一次 init.sh 来初始化\n";
 	cout << "之后请使用 boot.sh 启动\n";
@@ -701,13 +710,13 @@ void ui_WriteConfigPoA()
 	cout << "\n";
 
 	cout << "为了避免可能的网络安全问题\n";
-	cout << "自动探索功能已经关闭\n";
+	cout << "自动搜索功能已经关闭\n";
 	cout << "您可以修改 boot.sh 移除 --nodiscover 选项\n";
 	cout << "或者手动加入节点\n";
 
 	cout << "\n";
 
-	cout << "请确保至少 2 个或更多的节点上线 \n";
+	cout << "请确保至少 2 个及以上的节点上线 \n";
 
 }
 void ui_WriteConfig()
@@ -853,7 +862,7 @@ void ui_WriteConfig()
 		{
 			cout << i << ":\t" << accounts[i] << "\n";
 			cout << "\t\t密码:\t\t" << passwords[i] << "\n";
-			cout << "\t\t配置金额:\t" << amounts[i] << "\n";
+			cout << "\t\t预存金额:\t" << amounts[i] << "\n";
 		}
 	}
 	else
@@ -865,7 +874,7 @@ void ui_WriteConfig()
 	cout << "使用私有链前，您必须先进行初始化\n";
 	cout << "执行 " << iSFilePath << " 来进行初始化，仅一次\n";
 	cout << "往后执行 " << bSFilePath << " 启动您的私有链\n";
-	
+
 }
 
 void ui_RemovePoA()
@@ -897,16 +906,19 @@ void ui_Remove()
 
 void ui_CreateAccountPoA()
 {
+	string outputDir = getExeLocation();
 	if (totalAccountCount < 2)
 	{
-		cout << "必须建立至少两个以上的帐号以启动权威证明共识算法";
+		cout << "必须创建至少两个以上的帐号以启动权威证明共识算法";
 		exit(1);
 	}
 	accounts = new string[totalAccountCount];
 	for (int i = 0; i < totalAccountCount; i++)
 	{
+		string passwordLoc = outputDir + "password" + chainID + ".txt";
+		string resultLoc = outputDir + "result" + chainID + ".txt";
 		ofstream ofc;
-		ofc.open("password.txt");
+		ofc.open(passwordLoc.c_str());
 		ofc << passwords[i];
 		ofc.flush();
 		ofc.close();
@@ -923,12 +935,14 @@ void ui_CreateAccountPoA()
 		command.append(chainID);
 		command.append("-P");
 		command.append(to_string(i));
-		command.append(" -password ./password.txt");
-		command.append(" >> result.txt");
+		command.append(" -password ");
+		command.append(passwordLoc);
+		command.append(" >> ");
+		command.append(resultLoc);
 		system(command.c_str());
 
 		ifstream ifc;
-		ifc.open("result.txt");
+		ifc.open(resultLoc.c_str());
 		if (ifc.good())
 		{
 			while (ifc.peek() != EOF)
@@ -941,27 +955,33 @@ void ui_CreateAccountPoA()
 				}
 			}
 			ifc.close();
-			system("rm -rf ./result.txt");
+			string rmCmd = "rm -rf " + resultLoc;
+			system(rmCmd.c_str());
 		}
 		else
 		{
 			ifc.close();
+			string rmCmd = "rm -rf " + resultLoc;
 			cout << "无法从乙太链客户端取得信息 \n";
-			system("rm -rf ./result.txt");
+			system(rmCmd.c_str());
 		}
-		system("rm -rf ./password.txt");
+		string rmCmd = "rm -rf " + passwordLoc;
+		system(passwordLoc.c_str());
 
 	}
-	
+
 }
 
 void ui_CreateAccount()
 {
+	string outputDir = getExeLocation();
 	accounts = new string[totalAccountCount];
 	for (int i = 0; i < totalAccountCount; i++)
 	{
 		ofstream ofc;
-		ofc.open("password.txt");
+		string passwordLoc = outputDir + "password" + chainID + ".txt";
+		string resultLoc = outputDir + "password" + chainID + ".txt";
+		ofc.open(passwordLoc.c_str());
 		ofc << passwords[i];
 		ofc.flush();
 		ofc.close();
@@ -980,7 +1000,7 @@ void ui_CreateAccount()
 		system(command.c_str());
 
 		ifstream ifc;
-		ifc.open("result.txt");
+		ifc.open(resultLoc.c_str());
 		if (ifc.good())
 		{
 			while (ifc.peek() != EOF)
@@ -993,16 +1013,19 @@ void ui_CreateAccount()
 				}
 			}
 			ifc.close();
-			system("rm -rf ./result.txt");
+			string  rmCmd = "rm -rf " + resultLoc;
+			system(rmCmd.c_str());
 		}
 		else
 		{
 			ifc.close();
 			cout << "无法从乙太链客户端取得信息 \n";
-			system("rm -rf ./result.txt");
+			string rmCmd = "rm -rf " + resultLoc;
+			system(rmCmd.c_str());
 			exit(1);
 		}
-		system("rm -rf ./password.txt");
+		string rmCmd = "rm -rf " + passwordLoc;
+		system(rmCmd.c_str());
 
 	}
 
@@ -1017,7 +1040,7 @@ void ui_CreatePoA()
 	}
 	if (totalAccountCount < 2)
 	{
-		cout << "必须建立至少两个以上的帐号以启动权威证明共识算法\n";
+		cout << "必须创建至少两个以上的帐号以启动权威证明共识算法\n";
 		exit(1);
 	}
 	else
@@ -1053,7 +1076,7 @@ void ui_Create()
 		if (dataLoc.at(dataLoc.length() -1) != '/')
 		{
 			command.append("/");
-		}	
+		}
 		command.append("chain-");
 		command.append(chainID);
 		system(command.c_str());
@@ -1098,7 +1121,6 @@ void ui_Interactive()
 			auto_gasLimit();
 			cout << "手续费上限自动设定为 " << gas << "\n";
 		}
-		
 	} while (!check_gasLimit());
 
 	do
@@ -1120,7 +1142,6 @@ void ui_Interactive()
 			auto_difficulty(atoi(choice.c_str()));
 		}
 	} while (!check_difficulty());
-	
 	string accountInput;
 	do
 	{
@@ -1134,16 +1155,15 @@ void ui_Interactive()
 		string accountAmount;
 		do
 		{
-			cout << "您想建立几个账户 ? \n";
+			cout << "您想创建几个账户 ? \n";
 			getline(cin, accountAmount);
 		} while (accountAmount.at(0) == '0' || accountAmount.find_first_not_of("0123456789") != std::string::npos);
-		
 		string accountPrealloc;
 		string accountPreallocInput = "";
 
 		do
 		{
-			cout << "您想设定账户的默认配置金额吗 (Y/N)? \n";
+			cout << "您想设定账户的默认预存金额吗 (Y/N)? \n";
 			getline(cin, accountPrealloc);
 
 		} while (accountPrealloc.length() == 1 && accountPrealloc.find_first_not_of("YyNn") != std::string::npos);
@@ -1152,11 +1172,11 @@ void ui_Interactive()
 		{
 			do
 			{
-				cout << "请输入配置金额" << endl;
+				cout << "请输入预存金额" << endl;
 				getline(cin, accountPreallocInput);
 			} while (accountPreallocInput.at(0) == '0' || accountPreallocInput.find_first_not_of("1234567890") != std::string::npos);
 
-		}	
+		}
 
 		string accountPassword;
 		string accountPasswordInput = "";
@@ -1165,7 +1185,7 @@ void ui_Interactive()
 			cout << "您想设定账户的默认密码吗 (Y/N)? \n";
 			getline(cin, accountPassword);
 		} while (accountPassword.length() == 1 && accountPassword.find_first_not_of("YyNn") != std::string::npos);
-		
+
 		if (accountPassword == "Y" || accountPassword == "y")
 		{
 			do
@@ -1287,8 +1307,10 @@ bool check_chainExistPoA()
 
 void config_Load()
 {
+	string outputDir = getExeLocation();
+	string configLoc = outputDir + "config.ini";
 	ifstream ifc;
-	ifc.open("config.ini");
+	ifc.open(configLoc.c_str());
 	if (ifc.good())
 	{
 		while (ifc.peek() != EOF)
@@ -1320,6 +1342,7 @@ void config_Load()
 
 void config_Reset()
 {
+	string outputDir = getExeLocation();
 	cout << "请输入乙太坊客户端位置 ? \n";
 	string toGethLoc;
 	getline(cin, toGethLoc);
@@ -1330,7 +1353,8 @@ void config_Reset()
 	dataLoc.assign(toDataLoc);
 	cout << "设置文件已重置 \n";
 	ofstream ofc;
-	ofc.open("config.ini");
+	string configLoc = outputDir + "config.ini";
+	ofc.open(configLoc.c_str());
 	ofc << "geth=" << toGethLoc << "\n";
 	ofc << "data=" << toDataLoc << "\n";
 	ofc.flush();
@@ -1399,12 +1423,12 @@ void auto_autoAccount(string password, string preAlloc)
 {
 	if (totalAccountCount < 1)
 	{
-		cout << "自动建立并设置帐号出现问题 \n";
+		cout << "自动创建并设置帐号出现问题 \n";
 		exit(1);
 	}
 	else if (totalAccountCount > 100)
 	{
-		cout << "建立大量帐号将花费一点时间 \n";
+		cout << "创建大量帐号将花费一点时间 \n";
 	}
 	if (password.empty())
 	{
@@ -1429,7 +1453,7 @@ void auto_autoAccount(string password, string preAlloc)
 
 	if (preAlloc.empty())
 	{
-		cout << "没有指定默认配置金额 \n";
+		cout << "没有指定默认预存金额 \n";
 		cout << "设置为 0 Wei\n";
 		amounts = new string[totalAccountCount];
 		for (int i = 0; i < totalAccountCount; i++)
@@ -1441,12 +1465,12 @@ void auto_autoAccount(string password, string preAlloc)
 	{
 		if (preAlloc.at(0) == '0')
 		{
-			cout << "配置金额不能以 0 起头 \n";
+			cout << "预存金额不能以 0 起头 \n";
 			exit(1);
 		}
 		else if (preAlloc.find_first_not_of("0123456789") != std::string::npos)
 		{
-			cout << "您指定了非法的配置金额 \n";
+			cout << "您指定了非法的预存金额 \n";
 			exit(1);
 		}
 		else
@@ -1472,4 +1496,17 @@ string auto_password(const int digits)
 		returnPassword.append(sample.substr(choice, 1));
 	}
 	return returnPassword;
+}
+
+string getExeLocation()
+{
+        int programNameSize = programName.length();
+        return (getExePath()).substr(0, (getExePath()).length() - programNameSize);
+}
+
+string getExePath()
+{
+        char result[PATH_MAX];
+        ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+        return std::string(result, (count > 0) ? count : 0);
 }
